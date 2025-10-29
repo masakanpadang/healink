@@ -1,7 +1,7 @@
 <template>
-    <div class="flex w-full min-h-screen">
-      <div class="flex flex-col w-full">
-        <div class="flex w-full bg-[#3b62f0] p-4 text-white w-full items-center gap-4">
+    <div class="flex w-full h-screen overflow-hidden">
+      <div class="flex flex-col w-full h-full">
+        <div class="flex w-full bg-[#3b62f0] p-4 text-white w-full items-center gap-4 flex-shrink-0">
             <div class="flex flex-col flex-1">
                 <p class="text-xs">Room's ID</p>
                 <p class="font-bold text-xl">{{ roomID }}</p>
@@ -10,13 +10,13 @@
                 <button v-if="!totalDurationTime" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-orange-400 text-white rounded-lg px-2 py-1 hover:bg-orange-500 focus:outline-none" @click="switchCameraInternal">
                     Switch Camera
                 </button>
-                <button v-if="!totalDurationTime" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-purple-400 text-white rounded-lg px-2 py-1 hover:bg-purple-500 focus:outline-none" @click="toggleMirror">
-                    Mirror Camera
+                <button v-if="!totalDurationTime && availableCameras.length > 1" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-teal-400 text-white rounded-lg px-2 py-1 hover:bg-teal-500 focus:outline-none" @click="switchCamera2Internal">
+                    Switch Camera 2
                 </button>
-                <button v-if="!totalDurationTime && onCall" class="h-[25px] flex items-center justify-center class text-xs md:text-sm text-white rounded-lg px-2 py-1 focus:outline-none" :class="isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-400 hover:bg-green-500'" @click="toggleMute">
-                    {{ isMuted ? 'Unmute' : 'Mute' }}
+                <button v-if="!totalDurationTime && onCall" class="h-[35px] w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-xl" :class="isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-400 hover:bg-green-500'" @click="toggleMute" :title="isMuted ? 'Unmute' : 'Mute'">
+                    {{ isMuted ? '🔇' : '🎤' }}
                 </button>
-                <button v-if="showEraserLine" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-orange-400 text-white rounded-lg px-2 py-1 hover:bg-orange-500 focus:outline-none" @click="clearAnnotation(false)">
+                <button v-if="showEraserLine" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-orange-400 text-white rounded-lg px-2 py-1 hover:bg-orange-500 focus:outline-none" @click="clearAnnotation">
                     Clear Annotation
                 </button>
                 <button v-if="onCall" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-red-400 text-white rounded-lg px-2 py-1 hover:bg-red-500 focus:outline-none" @click="endCall">
@@ -29,26 +29,38 @@
             <p>The call has <span class="text-red-400 font-bold">ended</span>. Total duration <span class="text-red-400 font-bold">{{ totalDurationTime }}</span></p>
         </div>
         
-        <div v-else class="flex flex-col w-screen">
-            <div class="relative w-full flex justify-center items-center p-4">
-                <div class="relative w-full aspect-video">
-                    <video ref="cameraInput" autoplay playsinline :class="['w-full h-full object-contain rounded-xl bg-black', isMirrored ? 'transform scale-x-[-1]' : '']"></video>
+        <div v-else class="flex flex-col w-full h-full">
+            <!-- Info Banner -->
+            <div v-if="availableCameras.length > 1" class="flex justify-center p-2 bg-green-50 w-full flex-shrink-0">
+                <p class="text-sm text-gray-700">
+                    🎥 Active Camera: <span class="font-bold">{{ selectedCam === 1 ? camera1Name : camera2Name }}</span>
+                    <span class="text-xs text-gray-500 ml-2">({{ currentMirrorState ? 'Mirrored' : 'Normal' }})</span>
+                    <span class="text-xs text-gray-500 ml-1">(Controlled by participant)</span>
+                </p>
+            </div>
 
-                    <canvas
-                        ref="canvas"
-                        class="absolute top-0 left-0"
-                        @mousedown="startDraw"
-                        @mousemove="draw"
-                        @mouseup="stopDraw"
-                        @touchstart="startDrawTouch"
-                        @touchmove="drawTouch"
+            <div class="relative w-full flex justify-center items-center p-4 flex-1 overflow-hidden">
+                <div class="relative w-full max-w-[min(100vw,calc((100vh-140px)*16/9))] aspect-video">
+                    <!-- Main video with mirror -->
+                    <video ref="cameraInput" autoplay playsinline :class="['w-full h-full object-contain rounded-xl bg-black', currentMirrorState ? 'scale-x-[-1]' : '']"></video>
+                    
+                    <!-- Canvas for annotations - NO MIRROR on canvas itself -->
+                    <canvas 
+                        ref="canvas" 
+                        class="absolute top-0 left-0 w-full h-full"
+                        @mousedown="startDraw" 
+                        @mousemove="draw" 
+                        @mouseup="stopDraw" 
+                        @touchstart.prevent="startDrawTouch" 
+                        @touchmove.prevent="drawTouch" 
                         @touchend="stopDraw"
-                    />
+                    ></canvas>
                 </div>
             </div>
 
-            <div class="absolute bottom-0 left-0 flex p-4">
-                <div id="remote-stream" class="w-[120px] h-[120px] mt-4 rounded-xl overflow-hidden transform scale-x-[-1]"></div>
+            <!-- Preview Camera 2 (small) -->
+            <div v-if="selectedCamera2Id && availableCameras.length > 1" class="fixed bottom-4 right-4 w-48 aspect-video">
+                <video ref="camera2Input" autoplay playsinline :class="['w-full h-full object-contain rounded-xl bg-black border-2 border-white shadow-lg', camera2Mirror ? 'scale-x-[-1]' : '']"></video>
             </div>
         </div>
       </div>
@@ -56,7 +68,8 @@
 </template>
 
 <script setup lang="ts">
-import { addDoc, collection, deleteDoc, Firestore, getDocs, onSnapshot, orderBy, query, Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, onSnapshot, query, orderBy, getDocs, deleteDoc, doc, addDoc, setDoc } from 'firebase/firestore';
+import type { Firestore } from 'firebase/firestore';
 import { useAgora } from '~/composable/agora';
 import { getCoordinates } from '~/utils/canvasUtils';
 
@@ -64,11 +77,12 @@ const route = useRoute()
 const roomID = ref(route.params.id as string ?? '')
 const config = useRuntimeConfig()
 const appID = ref(config.public.APP_ID)
-// TODO: still hardcoded, need to be get from the user data once we have backend to maintain user.
+
 const userUUID = ref('e1c4fbd9e3f1459aab16e5f1ffaf5474')
 const canvas = ref<HTMLCanvasElement | null>(null)
 const ctxCanvas = ref<CanvasRenderingContext2D | null>(null)
 const cameraInput = ref<HTMLVideoElement | null>(null)
+const camera2Input = ref<HTMLVideoElement | null>(null)
 const startTime = ref()
 const totalDurationTime = ref<string | null>(null)
 const onCall = ref(false)
@@ -78,28 +92,58 @@ const lastX = ref<number | null>(null)
 const lastY = ref<number | null>(null)
 const availableCameras = ref<MediaDeviceInfo[]>([])
 const selectedCameraId = ref<string | null>(null)
+const selectedCamera2Id = ref<string | null>(null)
 const lines: Ref<LineData[]> = ref([])
-const isMirrored = ref(true)
 const isMuted = ref(false)
+const camera2Stream = ref<MediaStream | null>(null)
+const camera1Name = ref('Camera 1')
+const camera2Name = ref('Camera 2')
+
+const selectedCam = ref(1)
+const isSwitchingCamera = ref(false)
+
+const camera1Mirror = ref(true)
+const camera2Mirror = ref(false)
+
+const currentMirrorState = computed(() => {
+    return selectedCam.value === 1 ? camera1Mirror.value : camera2Mirror.value
+})
 
 const { $firestore } = useNuxtApp()
 const { client, joinChannel, localVideoTrack, localAudioTrack, leaveChannel, switchCamera } = useAgora(appID.value, roomID.value, userUUID.value)
 
 interface LineData {
-    startX: number; startY: number; endX: number; endY: number; role: number;
+    startX: number
+    startY: number
+    endX: number
+    endY: number
+    role: number
+    color: string
+    timestamp: Timestamp
 }
 
 onMounted(async () => {
     await getAvailableCameras();
     if (availableCameras.value.length > 0) {
         selectedCameraId.value = availableCameras.value[0].deviceId
+        camera1Name.value = availableCameras.value[0].label || 'Camera 1'
         await startCamera(selectedCameraId.value)
+        
+        if (availableCameras.value.length > 1) {
+            selectedCamera2Id.value = availableCameras.value[1].deviceId
+            camera2Name.value = availableCameras.value[1].label || 'Camera 2'
+            await startCamera2(selectedCamera2Id.value)
+        }
     }
+    
+    await initializeCameraStates()
+    await initializeRoom() // NEW: Initialize room collection
     join()
-    addLineDataToFirestore()
 
     document.body.classList.add('overflow-hidden')
     listenUserPublish()
+    listenToCameraStatesChanges()
+    
     nextTick(() => {
         if (cameraInput.value) {
             cameraInput.value.onloadeddata = () => {
@@ -127,138 +171,286 @@ const getAvailableCameras = async () => {
     }
 }
 
+const initializeCameraStates = async () => {
+    try {
+        const roomMetaDoc = doc(firestore.value, 'room-meta', roomID.value)
+        await setDoc(roomMetaDoc, {
+            selectedCam: 1,
+            camera1: selectedCameraId.value,
+            camera2: selectedCamera2Id.value,
+            camera1Name: camera1Name.value,
+            camera2Name: camera2Name.value,
+            camera1Mirror: true,
+            camera2Mirror: false,
+            updatedAt: Timestamp.now()
+        }, { merge: true })
+        
+        console.log('✅ Initialized camera states')
+    } catch (err) {
+        console.error('❌ Error initializing camera states:', err)
+    }
+}
+
+// NEW: Initialize room collection so participant can join
+const initializeRoom = async () => {
+    try {
+        const roomCollection = collection(firestore.value, roomID.value)
+        const roomInitDoc = doc(roomCollection, '_init')
+        
+        await setDoc(roomInitDoc, {
+            createdAt: Timestamp.now(),
+            createdBy: 'host',
+            status: 'active'
+        })
+        
+        console.log('✅ Room collection initialized')
+    } catch (err) {
+        console.error('❌ Error initializing room:', err)
+    }
+}
+
+const listenToCameraStatesChanges = () => {
+    const roomMetaDoc = doc(firestore.value, 'room-meta', roomID.value)
+    
+    onSnapshot(roomMetaDoc, async (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data()
+            const newSelectedCam = data.selectedCam || 1
+            const newCamera1Mirror = data.camera1Mirror ?? true
+            const newCamera2Mirror = data.camera2Mirror ?? false
+            
+            // Update mirror states
+            camera1Mirror.value = newCamera1Mirror
+            camera2Mirror.value = newCamera2Mirror
+            
+            // Check if camera switch is needed
+            if (newSelectedCam !== selectedCam.value && !isSwitchingCamera.value) {
+                console.log(`🔄 Camera switch requested: ${selectedCam.value} → ${newSelectedCam}`)
+                isSwitchingCamera.value = true
+                
+                try {
+                    if (newSelectedCam === 1) {
+                        await switchToCamera1()
+                    } else if (newSelectedCam === 2) {
+                        await switchToCamera2()
+                    }
+                    selectedCam.value = newSelectedCam
+                } catch (err) {
+                    console.error('❌ Error switching camera:', err)
+                } finally {
+                    isSwitchingCamera.value = false
+                }
+            }
+            
+            // Redraw canvas after mirror state changes
+            setTimeout(() => {
+                drawLineOnCanvas()
+            }, 100)
+        }
+    })
+}
+
+const switchToCamera1 = async () => {
+    if (!selectedCameraId.value) return
+    
+    console.log('📷 Switching to Camera 1')
+    await stopCamera()
+    await startCamera(selectedCameraId.value)
+    
+    if (localVideoTrack.value) {
+        await switchCamera(selectedCameraId.value)
+    }
+}
+
+const switchToCamera2 = async () => {
+    if (!selectedCamera2Id.value) return
+    
+    console.log('📷 Switching to Camera 2')
+    await stopCamera()
+    await startCamera(selectedCamera2Id.value)
+    
+    if (localVideoTrack.value) {
+        await switchCamera(selectedCamera2Id.value)
+    }
+}
+
 const switchCameraInternal = async () => {
+    if (isSwitchingCamera.value) return
     if (availableCameras.value.length < 2) {
-        alert('No other cameras available to switch to.')
+        console.log('⚠️ Only one camera available')
         return
     }
-
-    // Find the next camera in the list
-    const currentIndex = availableCameras.value.findIndex((camera) => camera.deviceId === selectedCameraId.value)
-    const nextIndex = (currentIndex + 1) % availableCameras.value.length
-    selectedCameraId.value = availableCameras.value[nextIndex].deviceId
-    // Restart the camera with the new device ID
-    await stopCamera()
-    const videoTrack = switchCamera(selectedCameraId.value)
-    await startCamera(selectedCameraId.value)
-}
-
-const toggleMirror = () => {
-    isMirrored.value = !isMirrored.value
-}
-
-const toggleMute = () => {
-    isMuted.value = !isMuted.value
     
-    if (localAudioTrack.value) {
-        if (isMuted.value) {
-            localAudioTrack.value.setEnabled(false)
+    isSwitchingCamera.value = true
+    
+    try {
+        const newCam = selectedCam.value === 1 ? 2 : 1
+        console.log(`🔄 Host manually switching to camera ${newCam}`)
+        
+        if (newCam === 1) {
+            await switchToCamera1()
         } else {
-            localAudioTrack.value.setEnabled(true)
+            await switchToCamera2()
         }
+        
+        selectedCam.value = newCam
+        await updateCameraStatesInFirestore()
+    } catch (err) {
+        console.error('❌ Error switching camera:', err)
+    } finally {
+        isSwitchingCamera.value = false
     }
 }
 
-const formatTime = (totalSeconds: number) => {
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
+const switchCamera2Internal = async () => {
+    if (!selectedCamera2Id.value || !camera2Input.value) return
+    
+    try {
+        const tempCameraId = selectedCameraId.value
+        const tempCameraName = camera1Name.value
+        const tempMirror = camera1Mirror.value
+        
+        selectedCameraId.value = selectedCamera2Id.value
+        camera1Name.value = camera2Name.value
+        camera1Mirror.value = camera2Mirror.value
+        
+        selectedCamera2Id.value = tempCameraId
+        camera2Name.value = tempCameraName
+        camera2Mirror.value = tempMirror
+        
+        await stopCamera()
+        await stopCamera2()
+        
+        if (selectedCameraId.value) {
+            await startCamera(selectedCameraId.value)
+        }
+        if (selectedCamera2Id.value) {
+            await startCamera2(selectedCamera2Id.value)
+        }
+        
+        if (selectedCam.value === 1 && localVideoTrack.value) {
+            await switchCamera(selectedCameraId.value!)
+        }
+        
+        await updateCameraStatesInFirestore()
+        console.log('✅ Camera 2 positions swapped')
+    } catch (err) {
+        console.error('❌ Error swapping camera 2:', err)
+    }
+}
 
-  return [hours, minutes, seconds]
-    .map((unit) => String(unit).padStart(2, "0"))
-    .join(":")
-};
+const toggleMute = async () => {
+    if (localAudioTrack.value) {
+        await localAudioTrack.value.setEnabled(isMuted.value)
+        isMuted.value = !isMuted.value
+    }
+}
 
 const endCall = () => {
-    clearSession()
-
-    const endTime = Date.now()
-    const durationInSeconds = Math.floor((endTime - startTime.value) / 1000)
-    totalDurationTime.value = formatTime(durationInSeconds)
+    const duration = Date.now() - startTime.value
+    totalDurationTime.value = millisToMinutesAndSeconds(duration)
     onCall.value = false
-}
-
-const clearSession = () => {
-    if (localAudioTrack.value) {
-        localAudioTrack.value.stop()
-        localAudioTrack.value.close()
-    }
-
-    if (localVideoTrack.value) {
-        localVideoTrack.value.stop()
-        localVideoTrack.value.close()
-    }
-    clearAnnotation(true)
-    stopCamera()
     leaveChannel()
 }
 
-// clear all the lines in the canvas and delete all the lines in Firestore.
-const clearAnnotation = async (endCall: boolean) => {
+const millisToMinutesAndSeconds = (millis: number) => {
+    const minutes = Math.floor(millis / 60000)
+    const seconds = parseInt(((millis % 60000) / 1000).toFixed(0))
+    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds
+}
+
+const clearSession = () => {
+    stopCamera()
+    stopCamera2()
+    leaveChannel()
+    document.body.classList.remove('overflow-hidden')
+}
+
+const clearAnnotation = async () => {
     try {
         const linesCollection = collection(firestore.value, roomID.value)
-        const q = query(linesCollection)
-        const snapshot = await getDocs(q)
+        const snapshot = await getDocs(linesCollection)
         
-        if (endCall) {
-            snapshot.docs.forEach((doc) => {
-                deleteDoc(doc.ref)
-            })
-        } else {
-            snapshot.docs.forEach((doc) => {
-                const lineData = doc.data() as LineData
-                if (lineData.startX != null && lineData.startY != null && lineData.endX != null && lineData.endY != null) {
-                    deleteDoc(doc.ref)
-                }
-            })
-        }
+        snapshot.docs.forEach(async (document) => {
+            if (document.id !== '_init') {
+                await deleteDoc(doc(firestore.value, roomID.value, document.id))
+            }
+        })
         
-        // clear canvas locally once successfully cleared in Firestore
-        if (ctxCanvas.value && canvas.value) {
-            ctxCanvas.value.clearRect(0, 0, canvas.value.width, canvas.value.height);
-        }
+        lines.value = []
+        showEraserLine.value = false
+        console.log('✅ All annotations cleared')
     } catch (err) {
-        console.error('Error clearing annotation', err)
+        console.error('Error clearing annotations', err)
     }
 }
 
-const startCamera = async (cameraId?: string) => {
+const startCamera = async (deviceId: string) => {
     if (!cameraInput.value) return
-
     try {
-        const constraints: MediaStreamConstraints = {
-            video: cameraId 
-                ? { 
-                    deviceId: { exact: cameraId },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    aspectRatio: { ideal: 16/9 }
-                  } 
-                : { 
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    aspectRatio: { ideal: 16/9 }
-                  },
-        }
-        const stream = await navigator.mediaDevices.getUserMedia(constraints)
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: deviceId } },
+            audio: false
+        })
         cameraInput.value.srcObject = stream
-        cameraInput.value.play()
+        console.log('✅ Camera started:', deviceId)
     } catch (error) {
-        alert("Could not access the camera.")
+        console.error("Could not start camera:", error)
+    }
+}
+
+const startCamera2 = async (deviceId: string) => {
+    if (!camera2Input.value) return
+    try {
+        camera2Stream.value = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: deviceId } },
+            audio: false
+        })
+        camera2Input.value.srcObject = camera2Stream.value
+        console.log('✅ Camera 2 started:', deviceId)
+    } catch (error) {
+        console.error("Could not start camera 2:", error)
     }
 }
 
 const stopCamera = async () => {
     if (!cameraInput.value || !cameraInput.value.srcObject) return
-
     try {
         const stream = cameraInput.value.srcObject as MediaStream
-        stream.getTracks().forEach((track) => {
-            track.stop()
-        })
+        stream.getTracks().forEach((track) => track.stop())
         cameraInput.value.srcObject = null
     } catch (error) {
-        alert("Could not access the camera.")
+        console.error("Could not stop camera:", error)
+    }
+}
+
+const stopCamera2 = async () => {
+    if (!camera2Input.value || !camera2Input.value.srcObject) return
+    try {
+        const stream = camera2Input.value.srcObject as MediaStream
+        stream.getTracks().forEach((track) => track.stop())
+        camera2Input.value.srcObject = null
+        camera2Stream.value = null
+    } catch (error) {
+        console.error("Could not stop camera 2:", error)
+    }
+}
+
+const updateCameraStatesInFirestore = async () => {
+    try {
+        const roomMetaDoc = doc(firestore.value, 'room-meta', roomID.value)
+        await setDoc(roomMetaDoc, {
+            selectedCam: selectedCam.value,
+            camera1: selectedCameraId.value,
+            camera2: selectedCamera2Id.value,
+            camera1Name: camera1Name.value,
+            camera2Name: camera2Name.value,
+            camera1Mirror: camera1Mirror.value,
+            camera2Mirror: camera2Mirror.value,
+            updatedAt: Timestamp.now()
+        }, { merge: true })
+    } catch (err) {
+        console.error('Error updating camera states', err)
     }
 }
 
@@ -275,22 +467,23 @@ const join = async () => {
     if (localElement) {
         res?.localVideoTrack.value?.play(localElement)
     }
+    await updateCameraStatesInFirestore()
 }
 
 const listenToDrawingUpdates = async () => {
     const linesCollection = collection(firestore.value, roomID.value)
     const q = query(linesCollection, orderBy('timestamp'))
-    
     onSnapshot(q, (snapshot) => {
-        showEraserLine.value = snapshot.size > 0
-        lines.value = snapshot.docs.map(doc => doc.data() as LineData)
+        // Filter out _init doc from lines
+        const annotationDocs = snapshot.docs.filter(doc => doc.id !== '_init')
+        showEraserLine.value = annotationDocs.length > 0
+        lines.value = annotationDocs.map(doc => doc.data() as LineData)
         drawLineOnCanvas()
     })
 }
 
 const setCanvasSize = () => {
     if (!canvas.value) return
-
     ctxCanvas.value = canvas.value.getContext('2d')
     if (ctxCanvas.value) {
         const video = cameraInput.value
@@ -303,28 +496,40 @@ const setCanvasSize = () => {
 }
 
 const drawLineOnCanvas = () => {
-    if (ctxCanvas.value && canvas.value) {
-        ctxCanvas.value.clearRect(0, 0, canvas.value.width, canvas.value.height)
+    if (!ctxCanvas.value || !canvas.value) return
+    
+    ctxCanvas.value.clearRect(0, 0, canvas.value.width, canvas.value.height)
+    
+    // Save current context state
+    ctxCanvas.value.save()
+    
+    // If mirrored, flip the canvas context for drawing
+    if (currentMirrorState.value) {
+        ctxCanvas.value.translate(canvas.value.width, 0)
+        ctxCanvas.value.scale(-1, 1)
     }
     
     lines.value.forEach(lineData => {
-        if (ctxCanvas.value) {
-            const width = canvas.value?.width ?? 1
-            const height = canvas.value?.height ?? 1
-            // set the color based on the role. role 1 is for the host and role 2 is for the participant.
-            ctxCanvas.value.strokeStyle = lineData.role === 1 ? 'blue' : 'red'
+        if (ctxCanvas.value && canvas.value) {
+            const width = canvas.value.width
+            const height = canvas.value.height
+            
+            // Use color from lineData, fallback to role-based color
+            ctxCanvas.value.strokeStyle = lineData.color || (lineData.role === 1 ? 'blue' : 'red')
             ctxCanvas.value.beginPath()
             ctxCanvas.value.moveTo(lineData.startX * width, lineData.startY * height)
-            ctxCanvas.value.lineTo(lineData.endX * width, lineData.endY  * height)
+            ctxCanvas.value.lineTo(lineData.endX * width, lineData.endY * height)
             ctxCanvas.value.stroke()
         }
     })
+    
+    // Restore context state
+    ctxCanvas.value.restore()
 }
 
 const listenUserPublish = async () => {
     client.value.on('user-published', async (user: { uid: any; videoTrack: any; audioTrack: any }, mediaType: string) => {
         if (user.uid === userUUID.value) return
-
         if (mediaType === 'video') {
             await client.value.subscribe(user, 'video')
             const remoteStream = user.videoTrack
@@ -339,24 +544,43 @@ const listenUserPublish = async () => {
     })
 }
 
+// Helper function to adjust coordinates when mirrored
+const adjustCoordinatesForMirror = (x: number, y: number): { x: number, y: number } => {
+    if (currentMirrorState.value && canvas.value) {
+        // When mirrored, flip the x coordinate
+        return { x: 1 - x, y }
+    }
+    return { x, y }
+}
+
+// Host can draw (keeping the code but won't be used much)
 const startDraw = (event: MouseEvent) => {
     isDrawing.value = true
-    const { x, y } = getCoordinates(event, canvas.value)
-    lastX.value = x
-    lastY.value = y
+    const coords = getCoordinates(event, canvas.value)
+    const adjusted = adjustCoordinatesForMirror(coords.x, coords.y)
+    lastX.value = adjusted.x
+    lastY.value = adjusted.y
 }
 
 const draw = (event: MouseEvent) => {
     if (!isDrawing.value || !ctxCanvas.value) return
-    const { x, y } = getCoordinates(event, canvas.value)
-    const lineData = { startX: lastX.value!, startY: lastY.value!, endX: x, endY: y, timestamp: Timestamp.now(), role: 1 }
+    const coords = getCoordinates(event, canvas.value)
+    const adjusted = adjustCoordinatesForMirror(coords.x, coords.y)
+    
+    const lineData: LineData = { 
+        startX: lastX.value!, 
+        startY: lastY.value!, 
+        endX: adjusted.x, 
+        endY: adjusted.y, 
+        role: 1,
+        color: 'blue',
+        timestamp: Timestamp.now()
+    }
     lines.value.push(lineData)
-
     addLineDataToFirestore(lineData)
     drawLineOnCanvas()
-  
-    lastX.value = x
-    lastY.value = y
+    lastX.value = adjusted.x
+    lastY.value = adjusted.y
 }
 
 const stopDraw = () => {
@@ -365,33 +589,39 @@ const stopDraw = () => {
 
 const startDrawTouch = (event: TouchEvent) => {
     isDrawing.value = true
-    const { x, y } = getCoordinates(event, canvas.value, true)
-    lastX.value = x
-    lastY.value = y
+    const coords = getCoordinates(event, canvas.value, true)
+    const adjusted = adjustCoordinatesForMirror(coords.x, coords.y)
+    lastX.value = adjusted.x
+    lastY.value = adjusted.y
 }
 
 const drawTouch = (event: TouchEvent) => {
     if (!isDrawing.value || !ctxCanvas.value) return
-
-    const { x, y } = getCoordinates(event, canvas.value, true)
-    const lineData = { startX: lastX.value!, startY: lastY.value!, endX: x, endY: y, timestamp: Timestamp.now(), role: 1 }
+    const coords = getCoordinates(event, canvas.value, true)
+    const adjusted = adjustCoordinatesForMirror(coords.x, coords.y)
+    
+    const lineData: LineData = { 
+        startX: lastX.value!, 
+        startY: lastY.value!, 
+        endX: adjusted.x, 
+        endY: adjusted.y, 
+        role: 1,
+        color: 'blue',
+        timestamp: Timestamp.now()
+    }
     lines.value.push(lineData)
-
     addLineDataToFirestore(lineData)
     drawLineOnCanvas()
-  
-    lastX.value = x
-    lastY.value = y
+    lastX.value = adjusted.x
+    lastY.value = adjusted.y
 }
 
-// Function to add line data to Firestore to make sure that the data is saved and the room is available for
-// participant to join.
-const addLineDataToFirestore = async (lineData?: LineData) => {
+const addLineDataToFirestore = async (lineData: LineData) => {
     try {
       const linesCollection = collection(firestore.value, roomID.value)
-      await addDoc(linesCollection, lineData ?? {})
+      await addDoc(linesCollection, lineData)
     } catch (err) {
-      console.error('Error saving line data to Firestore', err)
+      console.error('Error saving line data', err)
     }
 }
 </script>

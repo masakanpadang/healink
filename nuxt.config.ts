@@ -12,6 +12,7 @@ export default defineNuxtConfig({
       mode: 'client'
     },
   ],
+
   vite: {
     server: {
       allowedHosts: [
@@ -19,6 +20,7 @@ export default defineNuxtConfig({
       ],
     }
   },
+
   runtimeConfig: {
     public: {
       APP_ID: process.env.APP_ID,
@@ -33,4 +35,8 @@ export default defineNuxtConfig({
   },
   modules: ['@nuxtjs/tailwindcss'],
   css: ['~/assets/css/tailwind.css'],
+
+  devServer: {
+    host: '0.0.0.0'
+  }
 })
