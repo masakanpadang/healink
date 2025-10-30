@@ -222,11 +222,11 @@
 </template>
 
 <script setup lang="ts">
-import { Timestamp, collection, onSnapshot, query, orderBy, getDocs, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { Timestamp, collection, onSnapshot, query, orderBy, getDocs, deleteDoc, doc, setDoc, getDoc, addDoc } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import { useAgora } from '~/composable/agora';
 import { getCoordinates } from '~/utils/canvasUtils';
-import { addDoc } from 'firebase/firestore';
+
 
 const route = useRoute()
 const roomID = ref(route.params.id as string ?? '')
@@ -700,30 +700,66 @@ const saveLineDataToFirestore = async (lineData: LineData) => {
     }
 }
 
-// PTZ Control Functions
-const startPTZ = (direction: string) => {
+// PTZ Control Functions - UPDATED WITH FIRESTORE
+const startPTZ = async (direction: string) => {
     ptzActive.value = true
     ptzDirection.value = direction
     console.log(`🎮 PTZ Control Started: ${direction}`)
     
-    // TODO: Implement PTZ control logic
-    // This will be connected to backend in next step
-}
-
-const stopPTZ = () => {
-    if (ptzActive.value) {
-        console.log(`🎮 PTZ Control Stopped: ${ptzDirection.value}`)
-        ptzActive.value = false
-        ptzDirection.value = null
-        
-        // TODO: Implement stop PTZ logic
+    try {
+        // Simpan command ke Firestore
+        const ptzCommandsCollection = collection(firestore.value, 'ptz-commands')
+        await addDoc(ptzCommandsCollection, {
+            command: direction,
+            roomID: roomID.value,
+            timestamp: Timestamp.now(),
+            status: 'pending'
+        })
+        console.log(`✅ PTZ command '${direction}' sent to Firestore`)
+    } catch (err) {
+        console.error('❌ Error sending PTZ command:', err)
     }
 }
 
-const resetPTZ = () => {
+const stopPTZ = async () => {
+    if (ptzActive.value) {
+        console.log(`🎮 PTZ Control Stopped: ${ptzDirection.value}`)
+        
+        try {
+            // Kirim command 'stop' ke Firestore
+            const ptzCommandsCollection = collection(firestore.value, 'ptz-commands')
+            await addDoc(ptzCommandsCollection, {
+                command: 'stop',
+                roomID: roomID.value,
+                timestamp: Timestamp.now(),
+                status: 'pending'
+            })
+            console.log(`✅ PTZ stop command sent to Firestore`)
+        } catch (err) {
+            console.error('❌ Error sending PTZ stop command:', err)
+        }
+        
+        ptzActive.value = false
+        ptzDirection.value = null
+    }
+}
+
+const resetPTZ = async () => {
     console.log('🎯 PTZ Reset to Home Position')
     
-    // TODO: Implement reset PTZ to home position
+    try {
+        // Kirim command 'reset' atau 'home' ke Firestore
+        const ptzCommandsCollection = collection(firestore.value, 'ptz-commands')
+        await addDoc(ptzCommandsCollection, {
+            command: 'reset',
+            roomID: roomID.value,
+            timestamp: Timestamp.now(),
+            status: 'pending'
+        })
+        console.log(`✅ PTZ reset command sent to Firestore`)
+    } catch (err) {
+        console.error('❌ Error sending PTZ reset command:', err)
+    }
 }
 
 // Fullscreen Functions
