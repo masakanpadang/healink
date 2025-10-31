@@ -39,7 +39,7 @@
                     @click="toggleMute" 
                     :title="isMuted ? 'Unmute' : 'Mute'"
                 >
-                    {{ isMuted ? '🔇' : '🎤' }}
+                    {{ isMuted ? '🔇' : '🎙️' }}
                 </button>
                 <button 
                     v-if="showEraserLine" 
@@ -112,7 +112,7 @@
                     class="w-full h-full rounded-xl bg-gray-800 border-2 border-white shadow-lg overflow-hidden"
                 ></div>
                 <div class="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded">
-                    Participant
+                    Proctor
                 </div>
             </div>
         </div>
@@ -371,6 +371,8 @@ const switchCamera2Internal = async () => {
 }
 
 const endCall = async () => {
+    console.log('🔴 Ending call...')
+    
     const endTime = Date.now()
     const totalTime = (endTime - startTime.value) / 1000
     const minutes = Math.floor(totalTime / 60)
@@ -378,10 +380,15 @@ const endCall = async () => {
     totalDurationTime.value = `${minutes} minutes ${seconds} seconds`
     onCall.value = false
     
+    console.log('⏱️ Call duration:', totalDurationTime.value)
+    
     // Hapus database room
     await deleteRoomData()
     
-    clearSession()
+    // Clear all media tracks and leave channel
+    await clearSession()
+    
+    console.log('✅ Call ended successfully')
 }
 
 const deleteRoomData = async () => {
@@ -424,10 +431,42 @@ const clearAnnotation = async () => {
 }
 
 const clearSession = async () => {
+    console.log('🛑 Clearing session...')
+    
+    // Stop local audio track
+    if (localAudioTrack.value) {
+        localAudioTrack.value.stop()
+        localAudioTrack.value.close()
+        console.log('🎤 Audio track stopped and closed')
+    }
+    
+    // Stop local video track
+    if (localVideoTrack.value) {
+        localVideoTrack.value.stop()
+        localVideoTrack.value.close()
+        console.log('📹 Video track stopped and closed')
+    }
+    
+    // Leave Agora channel
     await leaveChannel()
+    console.log('📞 Left channel')
+    
+    // Stop camera streams
     await stopCamera()
     await stopCamera2()
+    
+    // Clear video element srcObject
+    if (mainVideo.value) {
+        mainVideo.value.srcObject = null
+        console.log('🎥 Main video cleared')
+    }
+    if (previewVideo.value) {
+        previewVideo.value.srcObject = null
+        console.log('🎥 Preview video cleared')
+    }
+    
     document.body.classList.remove('overflow-hidden')
+    console.log('✅ Session cleared successfully')
 }
 
 const toggleMute = () => {
@@ -636,14 +675,25 @@ const listenUserPublish = async () => {
             console.log('🎥 Subscribing to video from:', user.uid)
             await client.value.subscribe(user, 'video')
             const remoteStream = user.videoTrack
-            const remoteElement = document.getElementById('remote-stream')
-            if (remoteElement) {
-                remoteStream.play(remoteElement)
-                hasRemoteVideo.value = true
-                console.log('✅ Remote video playing, hasRemoteVideo set to true')
-            } else {
-                console.error('❌ Remote stream element not found!')
-            }
+            
+            // Set hasRemoteVideo first to trigger Vue to render the element
+            hasRemoteVideo.value = true
+            console.log('✅ hasRemoteVideo set to true, waiting for element...')
+            
+            // Wait for Vue to render the element
+            await nextTick()
+            
+            // Small additional delay to ensure DOM is ready
+            setTimeout(() => {
+                const remoteElement = document.getElementById('remote-stream')
+                if (remoteElement) {
+                    remoteStream.play(remoteElement)
+                    console.log('✅ Remote video playing in element')
+                } else {
+                    console.error('❌ Remote stream element still not found after nextTick!')
+                }
+            }, 100)
+            
         } else if (mediaType === 'audio') {
             console.log('🎵 Subscribing to audio from:', user.uid)
             await client.value.subscribe(user, 'audio')

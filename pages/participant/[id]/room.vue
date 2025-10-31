@@ -1,8 +1,17 @@
 <template>
     <div class="flex w-full min-h-screen overflow-hidden">
 
-    <div v-if="roomDoesntExist" class="flex p-4 bg-gray-100 w-screen justify-center">
-        <p>Sorry the room doesnt exist. Contact the host to create new room</p>
+    <div v-if="roomDoesntExist" class="flex flex-col items-center justify-center p-8 bg-gray-100 w-screen gap-4 min-h-screen">
+        <div class="text-center space-y-4">
+            <p class="text-lg text-gray-700">❌ Sorry, this room doesn't exist.</p>
+            <p class="text-sm text-gray-500">Please contact the host to create a new room.</p>
+            <button 
+                class="flex items-center justify-center gap-2 text-sm bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 focus:outline-none transition-colors"
+                @click="goHome"
+            >
+                🏠 Back to Home
+            </button>
+        </div>
     </div>
     <div v-else class="flex flex-col w-full h-screen items-center overflow-hidden">
         <div class="flex w-full bg-[#3b62f0] p-2 lg:p-4 text-white w-full items-center">
@@ -11,88 +20,95 @@
                 <p class="font-bold text-sm lg:text-xl truncate">{{ roomID }}</p>
             </div>
             
-            <!-- CENTER BUTTON: PTZ TOGGLE -->
-            <div class="flex justify-center flex-1">
-                <button 
-                    v-if="!totalDurationTime"
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs text-white rounded-lg px-2 lg:px-3 py-1 focus:outline-none whitespace-nowrap transition-colors"
-                    :class="showPTZControls ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-600 hover:bg-gray-700'"
-                    @click="togglePTZControls"
-                >
-                    <span class="hidden lg:inline">🕹️ Camera Control</span>
-                    <span class="lg:hidden">🕹️</span>
-                </button>
-            </div>
-
-            <div class="flex flex-wrap gap-1 lg:gap-2 justify-end flex-1">
+            <div class="flex gap-1 lg:gap-2 justify-end flex-1 overflow-x-auto">
                 <!-- FULLSCREEN BUTTON -->
                 <button 
                     v-if="!totalDurationTime"
-                    class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg focus:outline-none text-base lg:text-lg"
+                    class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg focus:outline-none text-base lg:text-lg flex-shrink-0"
                     @click="toggleFullscreen"
                     :title="isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
                 >
                     {{ isFullscreen ? '⛶' : '⛶' }}
                 </button>
                 
-                <!-- SWITCH CAMERA BUTTON -->
+                <!-- PTZ TOGGLE - MOVED HERE WITH MORE SPACE -->
+                <button 
+                    v-if="!totalDurationTime"
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs text-white rounded-lg px-2 lg:px-3 py-1 focus:outline-none whitespace-nowrap transition-colors flex-shrink-0 ml-2 lg:ml-4"
+                    :class="showPTZControls ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'"
+                    @click="togglePTZControls"
+                >
+                    <span class="hidden lg:inline">🕹️ Camera Control</span>
+                    <span class="lg:hidden">🕹️</span>
+                </button>
+                
+                <!-- SWITCH CAMERA BUTTON - UPDATED WITH CONSISTENT SIZE -->
                 <button 
                     v-if="!totalDurationTime && hostHasCamera2" 
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs text-white rounded-lg px-1.5 lg:px-2 py-1 focus:outline-none whitespace-nowrap"
+                    class="h-[30px] lg:h-[35px] inline-flex items-center justify-center text-white rounded-lg focus:outline-none text-base lg:text-lg flex-shrink-0 px-1.5 min-w-[30px] lg:min-w-[35px] whitespace-nowrap"
                     :class="isWaitingForCameraSwitch ? 'bg-gray-400 cursor-wait' : 'bg-orange-400 hover:bg-orange-500'"
                     @click="toggleHostCamera"
                     :disabled="isWaitingForCameraSwitch"
                 >
-                    <span v-if="isWaitingForCameraSwitch" class="hidden lg:inline">⏳ Switching...</span>
-                    <span v-if="isWaitingForCameraSwitch" class="lg:hidden">⏳</span>
-                    <span v-else class="hidden lg:inline">{{ selectedCam === 1 ? 'Switch to Cam 2' : 'Switch to Cam 1' }}</span>
-                    <span v-else class="lg:hidden">📷{{ selectedCam === 1 ? '2' : '1' }}</span>
+                    <span v-if="isWaitingForCameraSwitch">⏳</span>
+                    <span v-else>🔄️🎦</span>
                 </button>
                 
-                <!-- MIRROR CAMERA BUTTON -->
+                <!-- MIRROR CAMERA BUTTON - UPDATED SIZE -->
                 <button 
                     v-if="!totalDurationTime" 
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-purple-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-purple-500 focus:outline-none whitespace-nowrap"
+                    class="h-[30px] lg:h-[35px] inline-flex items-center justify-center text-white rounded-lg focus:outline-none text-base lg:text-lg flex-shrink-0 px-1.5 min-w-[30px] lg:min-w-[35px] whitespace-nowrap bg-purple-400 hover:bg-purple-500"
                     @click="toggleMirrorCamera"
                 >
-                    <span class="hidden lg:inline">{{ currentMirrorState ? '🪞 Unmirror' : '🪞 Mirror' }}</span>
-                    <span class="lg:hidden">🪞</span>
+                    🔁🎦
                 </button>
                 
-                <!-- ANNOTATION COLOR PICKER - UPDATED EMOJI -->
+                <!-- ANNOTATION COLOR PICKER - UPDATED EMOJI FOR MOBILE -->
                 <button 
                     v-if="!totalDurationTime" 
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-lg lg:text-xl text-white rounded-lg px-1.5 lg:px-2 py-1 focus:outline-none whitespace-nowrap"
+                    class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-lg lg:text-xl flex-shrink-0"
                     :class="annotationColor === 'red' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'"
                     @click="toggleAnnotationColor"
                 >
-                    ✒️
+                    <span class="hidden lg:inline">✒️</span>
+                    <span class="lg:hidden">🖊️</span>
+                </button>
+                
+                <!-- CAMERA ON/OFF BUTTON - FIXED WIDTH -->
+                <button 
+                    v-if="!totalDurationTime && onCall" 
+                    class="h-[30px] lg:h-[35px] inline-flex items-center justify-center text-white rounded-lg focus:outline-none text-base lg:text-lg flex-shrink-0 px-1.5 min-w-[30px] lg:min-w-[35px]" 
+                    :class="isCameraOff ? 'bg-gray-400 hover:bg-gray-500' : 'bg-blue-400 hover:bg-blue-500'" 
+                    @click="toggleCamera" 
+                    :title="isCameraOff ? 'Turn On Camera' : 'Turn Off Camera'"
+                >
+                    <span class="whitespace-nowrap">{{ isCameraOff ? '📷❌' : '📷' }}</span>
                 </button>
                 
                 <!-- MUTE/UNMUTE BUTTON - UPDATED EMOJI -->
                 <button 
                     v-if="!totalDurationTime && onCall" 
-                    class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-lg lg:text-xl" 
-                    :class="isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-400 hover:bg-green-500'" 
+                    class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-lg lg:text-xl flex-shrink-0" 
+                    :class="isMuted ? 'bg-gray-400 hover:bg-gray-500' : 'bg-green-400 hover:bg-green-500'" 
                     @click="toggleMute" 
                     :title="isMuted ? 'Unmute' : 'Mute'"
                 >
                     {{ isMuted ? '🔇' : '🎙️' }}
                 </button>
                 
+                <!-- CLEAR ANNOTATION BUTTON - UPDATED SIZE -->
                 <button 
                     v-if="showEraserLine" 
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-orange-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-orange-500 focus:outline-none whitespace-nowrap" 
+                    class="h-[30px] lg:h-[35px] inline-flex items-center justify-center text-white rounded-lg focus:outline-none text-base lg:text-lg flex-shrink-0 px-1.5 min-w-[30px] lg:min-w-[35px] whitespace-nowrap bg-orange-400 hover:bg-orange-500" 
                     @click="clearAnnotation"
                 >
-                    <span class="hidden lg:inline">Clear Annotation</span>
-                    <span class="lg:hidden">🗑️</span>
+                    ❌🖊️
                 </button>
                 
                 <!-- LEAVE CALL BUTTON - ADDED MARGIN LEFT FOR SPACING -->
                 <button 
                     v-if="onCall" 
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-red-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-red-500 focus:outline-none whitespace-nowrap ml-2" 
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-red-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-red-500 focus:outline-none whitespace-nowrap ml-2 flex-shrink-0" 
                     @click="leaveCall"
                 >
                     <span class="hidden lg:inline">❌ Leave call</span>
@@ -112,13 +128,6 @@
         </div>
         
         <div v-else class="flex flex-col w-full h-full relative">
-            <!-- Camera Info Banner -->
-            <div v-if="hostHasCamera2" class="flex justify-center p-1 lg:p-2 bg-blue-50 flex-shrink-0">
-                <p class="text-[10px] lg:text-sm text-gray-700">
-                    🎥 <span class="font-bold">{{ currentCameraName }}</span>
-                    <span class="text-[9px] lg:text-xs text-gray-500 ml-1 lg:ml-2">({{ currentMirrorState ? 'Mirrored' : 'Normal' }})</span>
-                </p>
-            </div>
 
             <!-- PTZ Controls Sidebar - Floating Left -->
             <transition name="slide-fade">
@@ -190,27 +199,23 @@
                             <!-- Zoom In -->
                             <button 
                                 class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                @mousedown="startPTZ('zoom-in')"
-                                @mouseup="stopPTZ"
-                                @mouseleave="stopPTZ"
-                                @touchstart.prevent="startPTZ('zoom-in')"
-                                @touchend.prevent="stopPTZ"
+                                :class="currentZoom >= 3 ? 'opacity-50 cursor-not-allowed' : ''"
+                                :disabled="currentZoom >= 3"
+                                @click="zoomIn"
                                 title="Zoom In"
                             >
-                                🔍
+                                ➕
                             </button>
                             
                             <!-- Zoom Out -->
                             <button 
                                 class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                @mousedown="startPTZ('zoom-out')"
-                                @mouseup="stopPTZ"
-                                @mouseleave="stopPTZ"
-                                @touchstart.prevent="startPTZ('zoom-out')"
-                                @touchend.prevent="stopPTZ"
+                                :class="currentZoom <= 1 ? 'opacity-50 cursor-not-allowed' : ''"
+                                :disabled="currentZoom <= 1"
+                                @click="zoomOut"
                                 title="Zoom Out"
                             >
-                                🔎
+                                ➖
                             </button>
                         </div>
                     </div>
@@ -218,21 +223,29 @@
             </transition>
 
             <!-- Video Container -->
-            <div class="relative w-full flex justify-center items-center p-1 lg:p-4 flex-1 overflow-hidden">
-                <div class="relative w-full max-w-[min(100vw,calc((100vh-140px)*16/9))] aspect-video max-h-[calc(100vh-140px)] landscape-mobile:max-w-none landscape-mobile:w-auto landscape-mobile:h-[calc(100vh-80px)] landscape-mobile:aspect-auto landscape-mobile:ml-auto landscape-mobile:mr-2">
-                    <!-- Remote Video Stream - WITH MIRROR -->
+            <div class="relative w-full flex justify-center items-center flex-1 overflow-hidden p-1 lg:p-4">
+                <div class="relative w-full max-w-[min(100vw,calc((100vh-140px)*16/9))] aspect-video max-h-[calc(100vh-140px)] overflow-hidden rounded-lg lg:rounded-xl bg-black
+                            landscape-mobile:max-w-[calc(100vw-4px)] 
+                            landscape-mobile:max-h-[calc(100vh-56px)] 
+                            landscape-mobile:aspect-video
+                            landscape-mobile:p-0">
+                    <!-- Remote Video Stream - WITH MIRROR AND ZOOM (Content Only) -->
                     <video 
                         id="remote-stream" 
                         ref="remoteStream" 
                         autoplay 
                         playsinline 
-                        :class="['w-full h-full object-contain rounded-lg lg:rounded-xl bg-black', currentMirrorState ? 'scale-x-[-1]' : '']"
+                        :style="{ 
+                            transform: `${currentMirrorState ? 'scaleX(-1)' : ''} scale(${currentZoom})`,
+                            transformOrigin: 'center center'
+                        }"
+                        class="w-full h-full object-cover transition-transform duration-300"
                     ></video>
 
                     <!-- Canvas for Annotations - NO MIRROR on canvas itself -->
                     <canvas
                         ref="canvas"
-                        class="absolute top-0 left-0 w-full h-full"
+                        class="absolute top-0 left-0 w-full h-full pointer-events-auto"
                         @mousedown="startDraw"
                         @mousemove="draw"
                         @mouseup="stopDraw"
@@ -283,6 +296,7 @@ const lastX = ref<number | null>(null)
 const lastY = ref<number | null>(null)
 const lines: Ref<LineData[]> = ref([])
 const isMuted = ref(false)
+const isCameraOff = ref(false)
 const roomDoesntExist = ref(false)
 const annotationColor = ref('red')
 
@@ -308,6 +322,7 @@ const showPTZControls = ref(false)
 
 
 const isFullscreen = ref(false)
+const currentZoom = ref(1) // Zoom level: 1 = normal, max 3
 
 const { $firestore } = useNuxtApp()
 const { client, joinChannel, localVideoTrack, localAudioTrack, leaveChannel } = useAgora(appID.value, roomID.value, userUUID.value)
@@ -508,10 +523,49 @@ const toggleMute = async () => {
     }
 }
 
-const leaveCall = () => {
+const toggleCamera = async () => {
+    if (localVideoTrack.value) {
+        await localVideoTrack.value.setEnabled(isCameraOff.value)
+        isCameraOff.value = !isCameraOff.value
+        console.log(`📷 Camera ${isCameraOff.value ? 'OFF' : 'ON'}`)
+    }
+}
+
+const zoomIn = () => {
+    if (currentZoom.value < 3) {
+        currentZoom.value = Math.min(currentZoom.value + 0.25, 3)
+        console.log(`🔍➕ Zoom In: ${currentZoom.value}x`)
+    }
+}
+
+const zoomOut = () => {
+    if (currentZoom.value > 1) {
+        currentZoom.value = Math.max(currentZoom.value - 0.25, 1)
+        console.log(`🔍➖ Zoom Out: ${currentZoom.value}x`)
+    }
+}
+
+const leaveCall = async () => {
     const duration = Date.now() - startTime.value
     totalDurationTime.value = millisToMinutesAndSeconds(duration)
     onCall.value = false
+    
+    // Stop local tracks before leaving
+    try {
+        if (localVideoTrack.value) {
+            localVideoTrack.value.stop()
+            localVideoTrack.value.close()
+            console.log('📷 Local video track stopped')
+        }
+        if (localAudioTrack.value) {
+            localAudioTrack.value.stop()
+            localAudioTrack.value.close()
+            console.log('🎙️ Local audio track stopped')
+        }
+    } catch (err) {
+        console.error('❌ Error stopping tracks:', err)
+    }
+    
     leaveChannel()
     console.log('👋 Participant left the call')
 }
@@ -560,14 +614,19 @@ const join = async () => {
     startTime.value = Date.now()
     onCall.value = true
     
-    // Join channel and let Agora SDK handle camera/mic permission
-    const res = await joinChannel()
-    
-    // Display local video in preview using Agora track
-    const localElement = localStream.value
-    if (localElement && res?.localVideoTrack.value) {
-        res.localVideoTrack.value.play(localElement)
-        console.log('📹 Local video preview started')
+    try {
+        // Join channel and publish video/audio (NOT view-only, participant needs camera!)
+        const res = await joinChannel()
+        
+        // Display local video in preview using Agora track
+        const localElement = localStream.value
+        if (localElement && res?.localVideoTrack.value) {
+            res.localVideoTrack.value.play(localElement)
+            console.log('📹 Local video preview started')
+        }
+    } catch (err) {
+        console.error('❌ Error joining channel or accessing camera:', err)
+        alert('Cannot access camera/microphone. Please allow permissions and try again.')
     }
 }
 
@@ -824,7 +883,7 @@ const resetPTZ = async () => {
 // Fullscreen Functions
 const toggleFullscreen = async () => {
     try {
-        const elem = document.documentElement
+        const elem = document.documentElement as any // Type cast untuk support vendor prefixes
         
         if (!isFullscreen.value) {
             // Enter fullscreen
@@ -840,14 +899,15 @@ const toggleFullscreen = async () => {
             console.log('📱 Entered fullscreen mode')
         } else {
             // Exit fullscreen
-            if (document.exitFullscreen) {
-                await document.exitFullscreen()
-            } else if (document.webkitExitFullscreen) {
-                await document.webkitExitFullscreen()
-            } else if (document.mozCancelFullScreen) {
-                await document.mozCancelFullScreen()
-            } else if (document.msExitFullscreen) {
-                await document.msExitFullscreen()
+            const doc = document as any // Type cast untuk support vendor prefixes
+            if (doc.exitFullscreen) {
+                await doc.exitFullscreen()
+            } else if (doc.webkitExitFullscreen) {
+                await doc.webkitExitFullscreen()
+            } else if (doc.mozCancelFullScreen) {
+                await doc.mozCancelFullScreen()
+            } else if (doc.msExitFullscreen) {
+                await doc.msExitFullscreen()
             }
             console.log('📱 Exited fullscreen mode')
         }
@@ -857,11 +917,12 @@ const toggleFullscreen = async () => {
 }
 
 const handleFullscreenChange = () => {
+    const doc = document as any // Type cast untuk support vendor prefixes
     isFullscreen.value = !!(
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.mozFullScreenElement ||
-        document.msFullscreenElement
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
     )
     console.log('📱 Fullscreen state:', isFullscreen.value)
     
@@ -895,28 +956,20 @@ const handleFullscreenChange = () => {
 
 /* Landscape Mobile Optimization - Only for small screens in landscape */
 @media only screen and (max-width: 768px) and (max-height: 500px) and (orientation: landscape) {
-  .landscape-mobile\:max-w-none {
-    max-width: none;
+  .landscape-mobile\:max-w-\[calc\(100vw-4px\)\] {
+    max-width: calc(100vw - 4px);
   }
   
-  .landscape-mobile\:w-auto {
-    width: auto;
+  .landscape-mobile\:max-h-\[calc\(100vh-56px\)\] {
+    max-height: calc(100vh - 56px);
   }
   
-  .landscape-mobile\:h-\[calc\(100vh-80px\)\] {
-    height: calc(100vh - 80px);
+  .landscape-mobile\:aspect-video {
+    aspect-ratio: 16 / 9;
   }
   
-  .landscape-mobile\:aspect-auto {
-    aspect-ratio: auto;
-  }
-  
-  .landscape-mobile\:ml-auto {
-    margin-left: auto;
-  }
-  
-  .landscape-mobile\:mr-2 {
-    margin-right: 0.5rem;
+  .landscape-mobile\:p-0 {
+    padding: 0;
   }
 }
 </style>
