@@ -10,7 +10,21 @@
                 <p class="text-[10px] lg:text-xs">Room's ID</p>
                 <p class="font-bold text-sm lg:text-xl truncate">{{ roomID }}</p>
             </div>
-            <div class="flex flex-wrap gap-1 lg:gap-2">
+            
+            <!-- CENTER BUTTON: PTZ TOGGLE -->
+            <div class="flex justify-center flex-1">
+                <button 
+                    v-if="!totalDurationTime"
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs text-white rounded-lg px-2 lg:px-3 py-1 focus:outline-none whitespace-nowrap transition-colors"
+                    :class="showPTZControls ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-600 hover:bg-gray-700'"
+                    @click="togglePTZControls"
+                >
+                    <span class="hidden lg:inline">🕹️ Camera Control</span>
+                    <span class="lg:hidden">🕹️</span>
+                </button>
+            </div>
+
+            <div class="flex flex-wrap gap-1 lg:gap-2 justify-end flex-1">
                 <!-- FULLSCREEN BUTTON -->
                 <button 
                     v-if="!totalDurationTime"
@@ -45,20 +59,25 @@
                     <span class="lg:hidden">🪞</span>
                 </button>
                 
-                <!-- ANNOTATION COLOR PICKER -->
+                <!-- ANNOTATION COLOR PICKER - UPDATED EMOJI -->
                 <button 
                     v-if="!totalDurationTime" 
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs text-white rounded-lg px-1.5 lg:px-2 py-1 focus:outline-none whitespace-nowrap"
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-lg lg:text-xl text-white rounded-lg px-1.5 lg:px-2 py-1 focus:outline-none whitespace-nowrap"
                     :class="annotationColor === 'red' ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'"
                     @click="toggleAnnotationColor"
                 >
-                    <span class="hidden lg:inline">🖍️ {{ annotationColor === 'red' ? 'Red' : 'Blue' }}</span>
-                    <span class="lg:hidden">🖍️</span>
+                    ✒️
                 </button>
                 
-                <!-- MUTE/UNMUTE BUTTON WITH EMOJI -->
-                <button v-if="!totalDurationTime && onCall" class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-lg lg:text-xl" :class="isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-400 hover:bg-green-500'" @click="toggleMute" :title="isMuted ? 'Unmute' : 'Mute'">
-                    {{ isMuted ? '🔇' : '🎤' }}
+                <!-- MUTE/UNMUTE BUTTON - UPDATED EMOJI -->
+                <button 
+                    v-if="!totalDurationTime && onCall" 
+                    class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-lg lg:text-xl" 
+                    :class="isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-400 hover:bg-green-500'" 
+                    @click="toggleMute" 
+                    :title="isMuted ? 'Unmute' : 'Mute'"
+                >
+                    {{ isMuted ? '🔇' : '🎙️' }}
                 </button>
                 
                 <button 
@@ -69,22 +88,30 @@
                     <span class="hidden lg:inline">Clear Annotation</span>
                     <span class="lg:hidden">🗑️</span>
                 </button>
+                
+                <!-- LEAVE CALL BUTTON - ADDED MARGIN LEFT FOR SPACING -->
                 <button 
                     v-if="onCall" 
-                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-red-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-red-500 focus:outline-none whitespace-nowrap" 
-                    @click="endCall"
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-red-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-red-500 focus:outline-none whitespace-nowrap ml-2" 
+                    @click="leaveCall"
                 >
-                    <span class="hidden lg:inline">End call</span>
+                    <span class="hidden lg:inline">❌ Leave call</span>
                     <span class="lg:hidden">❌</span>
                 </button>
             </div>
         </div>
 
-        <div v-if="totalDurationTime" class="flex p-4 bg-gray-100 w-screen justify-center">
-            <p>The call has <span class="text-red-400 font-bold">ended</span>. Total duration <span class="text-red-400 font-bold">{{ totalDurationTime }}</span></p>
+        <div v-if="totalDurationTime" class="flex flex-col items-center justify-center p-4 bg-gray-100 w-screen gap-4">
+            <p class="text-center">You have <span class="text-blue-500 font-bold">left the call</span>. Total duration <span class="text-blue-500 font-bold">{{ totalDurationTime }}</span></p>
+            <button 
+                class="flex items-center justify-center text-sm bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 focus:outline-none transition-colors"
+                @click="goHome"
+            >
+                🏠 Go to Home
+            </button>
         </div>
         
-        <div v-else class="flex flex-col w-full h-full">
+        <div v-else class="flex flex-col w-full h-full relative">
             <!-- Camera Info Banner -->
             <div v-if="hostHasCamera2" class="flex justify-center p-1 lg:p-2 bg-blue-50 flex-shrink-0">
                 <p class="text-[10px] lg:text-sm text-gray-700">
@@ -93,9 +120,106 @@
                 </p>
             </div>
 
+            <!-- PTZ Controls Sidebar - Floating Left -->
+            <transition name="slide-fade">
+                <div 
+                    v-if="showPTZControls && !totalDurationTime"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white/95 backdrop-blur-sm rounded-xl lg:rounded-2xl p-2 lg:p-4 shadow-2xl"
+                >
+                    <div class="flex flex-col items-center gap-1 lg:gap-2">
+                        <!-- Title -->
+                        <p class="text-[9px] lg:text-xs font-semibold text-gray-700 mb-0.5 lg:mb-1">PTZ Control</p>
+                        
+                        <!-- Up Arrow -->
+                        <button 
+                            class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
+                            @mousedown="startPTZ('up')"
+                            @mouseup="stopPTZ"
+                            @mouseleave="stopPTZ"
+                            @touchstart.prevent="startPTZ('up')"
+                            @touchend.prevent="stopPTZ"
+                            title="Pan Up"
+                        >
+                            ⬆️
+                        </button>
+                        
+                        <!-- Left and Right Row (No Center Button) -->
+                        <div class="flex gap-1 lg:gap-2">
+                            <!-- Left Arrow -->
+                            <button 
+                                class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
+                                @mousedown="startPTZ('left')"
+                                @mouseup="stopPTZ"
+                                @mouseleave="stopPTZ"
+                                @touchstart.prevent="startPTZ('left')"
+                                @touchend.prevent="stopPTZ"
+                                title="Pan Left"
+                            >
+                                ⬅️
+                            </button>
+                            
+                            <!-- Right Arrow -->
+                            <button 
+                                class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
+                                @mousedown="startPTZ('right')"
+                                @mouseup="stopPTZ"
+                                @mouseleave="stopPTZ"
+                                @touchstart.prevent="startPTZ('right')"
+                                @touchend.prevent="stopPTZ"
+                                title="Pan Right"
+                            >
+                                ➡️
+                            </button>
+                        </div>
+                        
+                        <!-- Down Arrow -->
+                        <button 
+                            class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
+                            @mousedown="startPTZ('down')"
+                            @mouseup="stopPTZ"
+                            @mouseleave="stopPTZ"
+                            @touchstart.prevent="startPTZ('down')"
+                            @touchend.prevent="stopPTZ"
+                            title="Pan Down"
+                        >
+                            ⬇️
+                        </button>
+                        
+                        <!-- Zoom Controls -->
+                        <div class="flex gap-1 lg:gap-2 mt-1 lg:mt-2 pt-1 lg:pt-2 border-t border-gray-300">
+                            <!-- Zoom In -->
+                            <button 
+                                class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
+                                @mousedown="startPTZ('zoom-in')"
+                                @mouseup="stopPTZ"
+                                @mouseleave="stopPTZ"
+                                @touchstart.prevent="startPTZ('zoom-in')"
+                                @touchend.prevent="stopPTZ"
+                                title="Zoom In"
+                            >
+                                🔍
+                            </button>
+                            
+                            <!-- Zoom Out -->
+                            <button 
+                                class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
+                                @mousedown="startPTZ('zoom-out')"
+                                @mouseup="stopPTZ"
+                                @mouseleave="stopPTZ"
+                                @touchstart.prevent="startPTZ('zoom-out')"
+                                @touchend.prevent="stopPTZ"
+                                title="Zoom Out"
+                            >
+                                🔎
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
             <!-- Video Container -->
             <div class="relative w-full flex justify-center items-center p-1 lg:p-4 flex-1 overflow-hidden">
-                <div class="relative w-full max-w-[min(100vw,calc((100vh-140px)*16/9))] aspect-video">
+                <div class="relative w-full max-w-[min(100vw,calc((100vh-140px)*16/9))] aspect-video max-h-[calc(100vh-140px)] landscape-mobile:max-w-none landscape-mobile:w-auto landscape-mobile:h-[calc(100vh-80px)] landscape-mobile:aspect-auto landscape-mobile:ml-auto landscape-mobile:mr-2">
                     <!-- Remote Video Stream - WITH MIRROR -->
                     <video 
                         id="remote-stream" 
@@ -116,105 +240,17 @@
                         @touchmove.prevent="drawTouch"
                         @touchend="stopDraw"
                     />
-
-                    <!-- PTZ Controls Overlay - Optimized for landscape -->
-                    <div class="absolute bottom-2 left-2 lg:bottom-4 lg:left-4 bg-white/90 backdrop-blur-sm rounded-xl lg:rounded-2xl p-2 lg:p-4 shadow-lg">
-                        <div class="flex flex-col items-center gap-1 lg:gap-2">
-                            <!-- Title -->
-                            <p class="text-[9px] lg:text-xs font-semibold text-gray-700 mb-0.5 lg:mb-1">PTZ</p>
-                            
-                            <!-- Up Arrow -->
-                            <button 
-                                class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                @mousedown="startPTZ('up')"
-                                @mouseup="stopPTZ"
-                                @mouseleave="stopPTZ"
-                                @touchstart.prevent="startPTZ('up')"
-                                @touchend.prevent="stopPTZ"
-                                title="Pan Up"
-                            >
-                                ⬆️
-                            </button>
-                            
-                            <!-- Left, Center, Right Row -->
-                            <div class="flex gap-1 lg:gap-2">
-                                <!-- Left Arrow -->
-                                <button 
-                                    class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                    @mousedown="startPTZ('left')"
-                                    @mouseup="stopPTZ"
-                                    @mouseleave="stopPTZ"
-                                    @touchstart.prevent="startPTZ('left')"
-                                    @touchend.prevent="stopPTZ"
-                                    title="Pan Left"
-                                >
-                                    ⬅️
-                                </button>
-                                
-                                <!-- Center/Home Button -->
-                                <button 
-                                    class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-gray-500 hover:bg-gray-600 active:bg-gray-700 text-white rounded-lg text-sm lg:text-xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                    @click="resetPTZ"
-                                    title="Reset to Home Position"
-                                >
-                                    🎯
-                                </button>
-                                
-                                <!-- Right Arrow -->
-                                <button 
-                                    class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                    @mousedown="startPTZ('right')"
-                                    @mouseup="stopPTZ"
-                                    @mouseleave="stopPTZ"
-                                    @touchstart.prevent="startPTZ('right')"
-                                    @touchend.prevent="stopPTZ"
-                                    title="Pan Right"
-                                >
-                                    ➡️
-                                </button>
-                            </div>
-                            
-                            <!-- Down Arrow -->
-                            <button 
-                                class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                @mousedown="startPTZ('down')"
-                                @mouseup="stopPTZ"
-                                @mouseleave="stopPTZ"
-                                @touchstart.prevent="startPTZ('down')"
-                                @touchend.prevent="stopPTZ"
-                                title="Pan Down"
-                            >
-                                ⬇️
-                            </button>
-                            
-                            <!-- Zoom Controls -->
-                            <div class="flex gap-1 lg:gap-2 mt-1 lg:mt-2">
-                                <button 
-                                    class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                    @mousedown="startPTZ('zoomIn')"
-                                    @mouseup="stopPTZ"
-                                    @mouseleave="stopPTZ"
-                                    @touchstart.prevent="startPTZ('zoomIn')"
-                                    @touchend.prevent="stopPTZ"
-                                    title="Zoom In"
-                                >
-                                    ➕
-                                </button>
-                                <button 
-                                    class="w-8 h-8 lg:w-12 lg:h-12 flex items-center justify-center bg-green-500 hover:bg-green-600 active:bg-green-700 text-white rounded-lg text-base lg:text-2xl transition-all duration-150 shadow-md hover:shadow-lg touch-manipulation"
-                                    @mousedown="startPTZ('zoomOut')"
-                                    @mouseup="stopPTZ"
-                                    @mouseleave="stopPTZ"
-                                    @touchstart.prevent="startPTZ('zoomOut')"
-                                    @touchend.prevent="stopPTZ"
-                                    title="Zoom Out"
-                                >
-                                    ➖
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
+            </div>
+
+            <!-- Participant's Camera Preview (small) - Bottom Left -->
+            <div v-if="onCall" class="fixed bottom-4 left-4 w-32 lg:w-48 aspect-video z-10">
+                <div 
+                    ref="localStream" 
+                    id="local-stream"
+                    class="w-full h-full rounded-lg lg:rounded-xl bg-gray-800 border-2 border-white shadow-lg overflow-hidden"
+                ></div>
+                <p class="absolute bottom-1 left-1 text-[8px] lg:text-xs bg-black/60 text-white px-1 rounded">You</p>
             </div>
         </div>
     </div>
@@ -237,6 +273,7 @@ const userUUID = ref('e1c4fbd9e3f1459aab16e5f1ffaf5475')
 const canvas = ref<HTMLCanvasElement | null>(null)
 const ctxCanvas = ref<CanvasRenderingContext2D | null>(null)
 const remoteStream = ref<HTMLVideoElement | null>(null)
+const localStream = ref<HTMLDivElement | null>(null)
 const startTime = ref()
 const totalDurationTime = ref<string | null>(null)
 const onCall = ref(false)
@@ -267,11 +304,13 @@ const currentMirrorState = computed(() => {
 
 const ptzActive = ref(false)
 const ptzDirection = ref<string | null>(null)
+const showPTZControls = ref(false)
+
 
 const isFullscreen = ref(false)
 
 const { $firestore } = useNuxtApp()
-const { client, joinChannel, localAudioTrack, leaveChannel } = useAgora(appID.value, roomID.value, userUUID.value)
+const { client, joinChannel, localVideoTrack, localAudioTrack, leaveChannel } = useAgora(appID.value, roomID.value, userUUID.value)
 
 interface LineData {
     startX: number
@@ -469,11 +508,17 @@ const toggleMute = async () => {
     }
 }
 
-const endCall = () => {
+const leaveCall = () => {
     const duration = Date.now() - startTime.value
     totalDurationTime.value = millisToMinutesAndSeconds(duration)
     onCall.value = false
     leaveChannel()
+    console.log('👋 Participant left the call')
+}
+
+const goHome = () => {
+    // Navigate to home page
+    navigateTo('/')
 }
 
 const millisToMinutesAndSeconds = (millis: number) => {
@@ -514,7 +559,16 @@ const firestore = computed(() => {
 const join = async () => {
     startTime.value = Date.now()
     onCall.value = true
-    await joinChannel()
+    
+    // Join channel and let Agora SDK handle camera/mic permission
+    const res = await joinChannel()
+    
+    // Display local video in preview using Agora track
+    const localElement = localStream.value
+    if (localElement && res?.localVideoTrack.value) {
+        res.localVideoTrack.value.play(localElement)
+        console.log('📹 Local video preview started')
+    }
 }
 
 const listenToDrawingUpdates = async () => {
@@ -701,6 +755,11 @@ const saveLineDataToFirestore = async (lineData: LineData) => {
 }
 
 // PTZ Control Functions - UPDATED WITH FIRESTORE
+const togglePTZControls = () => {
+    showPTZControls.value = !showPTZControls.value
+    console.log(`🕹️ PTZ Controls ${showPTZControls.value ? 'shown' : 'hidden'}`)
+}
+
 const startPTZ = async (direction: string) => {
     ptzActive.value = true
     ptzDirection.value = direction
@@ -813,3 +872,51 @@ const handleFullscreenChange = () => {
     }, 100)
 }
 </script>
+
+<style scoped>
+/* Transition for PTZ Controls */
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.slide-fade-enter-from {
+  transform: translateX(-100%) translateY(-50%);
+  opacity: 0;
+}
+
+.slide-fade-leave-to {
+  transform: translateX(-100%) translateY(-50%);
+  opacity: 0;
+}
+
+/* Landscape Mobile Optimization - Only for small screens in landscape */
+@media only screen and (max-width: 768px) and (max-height: 500px) and (orientation: landscape) {
+  .landscape-mobile\:max-w-none {
+    max-width: none;
+  }
+  
+  .landscape-mobile\:w-auto {
+    width: auto;
+  }
+  
+  .landscape-mobile\:h-\[calc\(100vh-80px\)\] {
+    height: calc(100vh - 80px);
+  }
+  
+  .landscape-mobile\:aspect-auto {
+    aspect-ratio: auto;
+  }
+  
+  .landscape-mobile\:ml-auto {
+    margin-left: auto;
+  }
+  
+  .landscape-mobile\:mr-2 {
+    margin-right: 0.5rem;
+  }
+}
+</style>

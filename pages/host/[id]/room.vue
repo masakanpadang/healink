@@ -1,50 +1,87 @@
 <template>
     <div class="flex w-full h-screen overflow-hidden">
       <div class="flex flex-col w-full h-full">
-        <div class="flex w-full bg-[#3b62f0] p-4 text-white w-full items-center gap-4 flex-shrink-0">
-            <div class="flex flex-col flex-1">
-                <p class="text-xs">Room's ID</p>
-                <p class="font-bold text-xl">{{ roomID }}</p>
+        <div class="flex w-full bg-[#3b62f0] p-2 lg:p-4 text-white w-full items-center">
+            <div class="flex flex-col flex-1 min-w-0">
+                <p class="text-[10px] lg:text-xs">Room's ID</p>
+                <div class="flex items-center gap-2">
+                    <p class="font-bold text-sm lg:text-xl truncate">{{ roomID }}</p>
+                    <span 
+                        class="text-[9px] lg:text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
+                        :class="hasRemoteVideo ? 'bg-green-400 text-white' : 'bg-gray-400 text-white'"
+                    >
+                        {{ hasRemoteVideo ? '✓ Proctor Connected' : '○ Waiting for Proctor' }}
+                    </span>
+                </div>
             </div>
-            <div class="flex flex-wrap gap-2">
-                <button v-if="!totalDurationTime" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-orange-400 text-white rounded-lg px-2 py-1 hover:bg-orange-500 focus:outline-none" @click="switchCameraInternal">
-                    Switch Camera
+            
+            <div class="flex flex-wrap gap-1 lg:gap-2">
+                <!-- <button 
+                    v-if="!totalDurationTime" 
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs text-white rounded-lg px-1.5 lg:px-2 py-1 focus:outline-none whitespace-nowrap bg-orange-400 hover:bg-orange-500" 
+                    @click="switchCameraInternal"
+                >
+                    <span class="hidden lg:inline">Switch Camera</span>
+                    <span class="lg:hidden">📷1</span>
+                </button> -->
+                <button 
+                    v-if="!totalDurationTime && availableCameras.length > 1" 
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs text-white rounded-lg px-1.5 lg:px-2 py-1 focus:outline-none whitespace-nowrap bg-teal-400 hover:bg-teal-500" 
+                    @click="switchCamera2Internal"
+                >
+                    <span class="hidden lg:inline">Switch Preview Cam</span>
+                    <span class="lg:hidden">📷P</span>
                 </button>
-                <button v-if="!totalDurationTime && availableCameras.length > 1" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-teal-400 text-white rounded-lg px-2 py-1 hover:bg-teal-500 focus:outline-none" @click="switchCamera2Internal">
-                    Switch Camera 2
-                </button>
-                <button v-if="!totalDurationTime && onCall" class="h-[35px] w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-xl" :class="isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-400 hover:bg-green-500'" @click="toggleMute" :title="isMuted ? 'Unmute' : 'Mute'">
+                <button 
+                    v-if="!totalDurationTime && onCall" 
+                    class="h-[30px] w-[30px] lg:h-[35px] lg:w-[35px] flex items-center justify-center text-white rounded-lg focus:outline-none text-lg lg:text-xl" 
+                    :class="isMuted ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-400 hover:bg-green-500'" 
+                    @click="toggleMute" 
+                    :title="isMuted ? 'Unmute' : 'Mute'"
+                >
                     {{ isMuted ? '🔇' : '🎤' }}
                 </button>
-                <button v-if="showEraserLine" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-orange-400 text-white rounded-lg px-2 py-1 hover:bg-orange-500 focus:outline-none" @click="clearAnnotation">
-                    Clear Annotation
+                <button 
+                    v-if="showEraserLine" 
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-orange-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-orange-500 focus:outline-none whitespace-nowrap" 
+                    @click="clearAnnotation"
+                >
+                    <span class="hidden lg:inline">Clear Annotation</span>
+                    <span class="lg:hidden">🗑️</span>
                 </button>
-                <button v-if="onCall" class="h-[25px] flex items-center justify-center class text-xs md:text-sm bg-red-400 text-white rounded-lg px-2 py-1 hover:bg-red-500 focus:outline-none" @click="endCall">
-                    End call
+                <button 
+                    v-if="onCall" 
+                    class="h-[30px] lg:h-[35px] flex items-center justify-center text-[10px] lg:text-xs bg-red-400 text-white rounded-lg px-1.5 lg:px-2 py-1 hover:bg-red-500 focus:outline-none whitespace-nowrap ml-2" 
+                    @click="endCall"
+                >
+                    <span class="hidden lg:inline">End Call</span>
+                    <span class="lg:hidden">❌</span>
                 </button>
             </div>
         </div>
 
-        <div v-if="totalDurationTime" class="flex p-4 bg-gray-100 w-full justify-center">
+        <div v-if="totalDurationTime" class="flex flex-col p-4 bg-gray-100 w-full justify-center items-center gap-4">
             <p>The call has <span class="text-red-400 font-bold">ended</span>. Total duration <span class="text-red-400 font-bold">{{ totalDurationTime }}</span></p>
+            <button 
+                class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors"
+                @click="goToHome"
+            >
+                Back to Home
+            </button>
         </div>
         
         <div v-else class="flex flex-col w-full h-full">
-            <!-- Info Banner -->
-            <div v-if="availableCameras.length > 1" class="flex justify-center p-2 bg-green-50 w-full flex-shrink-0">
-                <p class="text-sm text-gray-700">
-                    🎥 Active Camera: <span class="font-bold">{{ selectedCam === 1 ? camera1Name : camera2Name }}</span>
-                    <span class="text-xs text-gray-500 ml-2">({{ currentMirrorState ? 'Mirrored' : 'Normal' }})</span>
-                    <span class="text-xs text-gray-500 ml-1">(Controlled by participant)</span>
-                </p>
-            </div>
-
-            <div class="relative w-full flex justify-center items-center p-4 flex-1 overflow-hidden">
+            <div class="relative w-full flex justify-center items-center p-2 lg:p-4 flex-1 overflow-hidden">
                 <div class="relative w-full max-w-[min(100vw,calc((100vh-140px)*16/9))] aspect-video">
-                    <!-- Main video with mirror -->
-                    <video ref="cameraInput" autoplay playsinline :class="['w-full h-full object-contain rounded-xl bg-black', currentMirrorState ? 'scale-x-[-1]' : '']"></video>
+                    <!-- Main video - TANPA BLACK BAR -->
+                    <video 
+                        ref="mainVideo" 
+                        autoplay 
+                        playsinline 
+                        :class="['w-full h-full object-cover rounded-xl', currentMirrorState ? 'scale-x-[-1]' : '']"
+                    ></video>
                     
-                    <!-- Canvas for annotations - NO MIRROR on canvas itself -->
+                    <!-- Canvas for annotations -->
                     <canvas 
                         ref="canvas" 
                         class="absolute top-0 left-0 w-full h-full"
@@ -58,9 +95,25 @@
                 </div>
             </div>
 
-            <!-- Preview Camera 2 (small) -->
-            <div v-if="selectedCamera2Id && availableCameras.length > 1" class="fixed bottom-4 right-4 w-48 aspect-video">
-                <video ref="camera2Input" autoplay playsinline :class="['w-full h-full object-contain rounded-xl bg-black border-2 border-white shadow-lg', camera2Mirror ? 'scale-x-[-1]' : '']"></video>
+            <!-- Preview Camera (small) - POSISI KANAN BAWAH -->
+            <div v-if="availableCameras.length > 1" class="fixed bottom-4 right-4 w-32 lg:w-48 aspect-video z-10">
+                <video 
+                    ref="previewVideo"
+                    autoplay 
+                    playsinline 
+                    :class="['w-full h-full object-cover rounded-xl bg-black border-2 border-white shadow-lg', previewMirrorState ? 'scale-x-[-1]' : '']"
+                ></video>
+            </div>
+
+            <!-- Preview Participant Camera (small) - POSISI KIRI BAWAH -->
+            <div v-if="hasRemoteVideo" class="fixed bottom-4 left-4 w-32 lg:w-48 aspect-video z-10">
+                <div 
+                    id="remote-stream" 
+                    class="w-full h-full rounded-xl bg-gray-800 border-2 border-white shadow-lg overflow-hidden"
+                ></div>
+                <div class="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded">
+                    Participant
+                </div>
             </div>
         </div>
       </div>
@@ -74,6 +127,7 @@ import { useAgora } from '~/composable/agora';
 import { getCoordinates } from '~/utils/canvasUtils';
 
 const route = useRoute()
+const router = useRouter()
 const roomID = ref(route.params.id as string ?? '')
 const config = useRuntimeConfig()
 const appID = ref(config.public.APP_ID)
@@ -81,8 +135,10 @@ const appID = ref(config.public.APP_ID)
 const userUUID = ref('e1c4fbd9e3f1459aab16e5f1ffaf5474')
 const canvas = ref<HTMLCanvasElement | null>(null)
 const ctxCanvas = ref<CanvasRenderingContext2D | null>(null)
-const cameraInput = ref<HTMLVideoElement | null>(null)
-const camera2Input = ref<HTMLVideoElement | null>(null)
+const mainVideo = ref<HTMLVideoElement | null>(null)
+const previewVideo = ref<HTMLVideoElement | null>(null)
+const camera1Stream = ref<MediaStream | null>(null)
+const camera2Stream = ref<MediaStream | null>(null)
 const startTime = ref()
 const totalDurationTime = ref<string | null>(null)
 const onCall = ref(false)
@@ -95,18 +151,38 @@ const selectedCameraId = ref<string | null>(null)
 const selectedCamera2Id = ref<string | null>(null)
 const lines: Ref<LineData[]> = ref([])
 const isMuted = ref(false)
-const camera2Stream = ref<MediaStream | null>(null)
+
 const camera1Name = ref('Camera 1')
 const camera2Name = ref('Camera 2')
+const hasRemoteVideo = ref(false)
 
 const selectedCam = ref(1)
 const isSwitchingCamera = ref(false)
 
-const camera1Mirror = ref(true)
+const camera1Mirror = ref(false)
 const camera2Mirror = ref(false)
 
 const currentMirrorState = computed(() => {
     return selectedCam.value === 1 ? camera1Mirror.value : camera2Mirror.value
+})
+
+const previewMirrorState = computed(() => {
+    return selectedCam.value === 1 ? camera2Mirror.value : camera1Mirror.value
+})
+
+// Watch for camera changes to update canvas and swap video streams
+watch(selectedCam, () => {
+    console.log('📹 Selected camera changed to:', selectedCam.value)
+    swapVideoStreams()
+    nextTick(() => {
+        setCanvasSize()
+        drawLineOnCanvas()
+    })
+})
+
+// Watch hasRemoteVideo changes
+watch(hasRemoteVideo, (newValue) => {
+    console.log('👁️ hasRemoteVideo changed to:', newValue)
 })
 
 const { $firestore } = useNuxtApp()
@@ -123,6 +199,8 @@ interface LineData {
 }
 
 onMounted(async () => {
+    console.log('🚀 Host page mounted')
+    
     await getAvailableCameras();
     if (availableCameras.value.length > 0) {
         selectedCameraId.value = availableCameras.value[0].deviceId
@@ -137,20 +215,43 @@ onMounted(async () => {
     }
     
     await initializeCameraStates()
-    await initializeRoom() // NEW: Initialize room collection
+    await initializeRoom()
+    
+    // Start listening to drawing updates IMMEDIATELY
+    console.log('👂 Starting to listen to drawing updates...')
+    listenToDrawingUpdates()
+    
+    console.log('📞 Joining channel...')
     join()
 
     document.body.classList.add('overflow-hidden')
+    
+    console.log('👂 Setting up listeners...')
     listenUserPublish()
     listenToCameraStatesChanges()
     
     nextTick(() => {
-        if (cameraInput.value) {
-            cameraInput.value.onloadeddata = () => {
+        // Set initial canvas size
+        setTimeout(() => {
+            console.log('⏰ Setting initial canvas size...')
+            setCanvasSize()
+            drawLineOnCanvas()
+        }, 500)
+        
+        if (mainVideo.value) {
+            mainVideo.value.onloadeddata = () => {
+                console.log('📹 Main video loaded, updating canvas size...')
                 setCanvasSize()
-                listenToDrawingUpdates()
+                drawLineOnCanvas()
             }
         }
+        
+        if (previewVideo.value) {
+            previewVideo.value.onloadeddata = () => {
+                console.log('📹 Preview video loaded')
+            }
+        }
+        
         window.addEventListener('resize', () => {
             setCanvasSize()
             drawLineOnCanvas()
@@ -161,6 +262,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
     clearSession()
 })
+
+const goToHome = () => {
+    router.push('/')
+}
 
 const getAvailableCameras = async () => {
     try {
@@ -191,7 +296,6 @@ const initializeCameraStates = async () => {
     }
 }
 
-// NEW: Initialize room collection so participant can join
 const initializeRoom = async () => {
     try {
         const roomCollection = collection(firestore.value, roomID.value)
@@ -211,159 +315,94 @@ const initializeRoom = async () => {
 
 const listenToCameraStatesChanges = () => {
     const roomMetaDoc = doc(firestore.value, 'room-meta', roomID.value)
-    
-    onSnapshot(roomMetaDoc, async (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data()
-            const newSelectedCam = data.selectedCam || 1
-            const newCamera1Mirror = data.camera1Mirror ?? true
-            const newCamera2Mirror = data.camera2Mirror ?? false
+    onSnapshot(roomMetaDoc, async (snapshot) => {
+        if (!snapshot.exists()) return
+        
+        const data = snapshot.data()
+        const newCam = data.selectedCam
+        const newCamera1Mirror = data.camera1Mirror
+        const newCamera2Mirror = data.camera2Mirror
+        
+        if (newCamera1Mirror !== undefined) camera1Mirror.value = newCamera1Mirror
+        if (newCamera2Mirror !== undefined) camera2Mirror.value = newCamera2Mirror
+        
+        if (newCam && newCam !== selectedCam.value) {
+            isSwitchingCamera.value = true
+            selectedCam.value = newCam
+            const targetCameraId = newCam === 1 ? selectedCameraId.value : selectedCamera2Id.value
             
-            // Update mirror states
-            camera1Mirror.value = newCamera1Mirror
-            camera2Mirror.value = newCamera2Mirror
-            
-            // Check if camera switch is needed
-            if (newSelectedCam !== selectedCam.value && !isSwitchingCamera.value) {
-                console.log(`🔄 Camera switch requested: ${selectedCam.value} → ${newSelectedCam}`)
-                isSwitchingCamera.value = true
-                
+            if (targetCameraId && localVideoTrack.value) {
                 try {
-                    if (newSelectedCam === 1) {
-                        await switchToCamera1()
-                    } else if (newSelectedCam === 2) {
-                        await switchToCamera2()
-                    }
-                    selectedCam.value = newSelectedCam
+                    await switchCamera(targetCameraId)
+                    await new Promise(resolve => setTimeout(resolve, 500))
                 } catch (err) {
-                    console.error('❌ Error switching camera:', err)
-                } finally {
-                    isSwitchingCamera.value = false
+                    console.error('Error switching camera:', err)
                 }
             }
-            
-            // Redraw canvas after mirror state changes
-            setTimeout(() => {
-                drawLineOnCanvas()
-            }, 100)
+            isSwitchingCamera.value = false
         }
     })
 }
 
-const switchToCamera1 = async () => {
-    if (!selectedCameraId.value) return
+const switchCameraInternal = async () => {
+    if (availableCameras.value.length < 2) return
     
-    console.log('📷 Switching to Camera 1')
+    const currentIndex = availableCameras.value.findIndex(cam => cam.deviceId === selectedCameraId.value)
+    const nextIndex = (currentIndex + 1) % availableCameras.value.length
+    selectedCameraId.value = availableCameras.value[nextIndex].deviceId
+    camera1Name.value = availableCameras.value[nextIndex].label || `Camera ${nextIndex + 1}`
+    
     await stopCamera()
     await startCamera(selectedCameraId.value)
-    
-    if (localVideoTrack.value) {
-        await switchCamera(selectedCameraId.value)
-    }
-}
-
-const switchToCamera2 = async () => {
-    if (!selectedCamera2Id.value) return
-    
-    console.log('📷 Switching to Camera 2')
-    await stopCamera()
-    await startCamera(selectedCamera2Id.value)
-    
-    if (localVideoTrack.value) {
-        await switchCamera(selectedCamera2Id.value)
-    }
-}
-
-const switchCameraInternal = async () => {
-    if (isSwitchingCamera.value) return
-    if (availableCameras.value.length < 2) {
-        console.log('⚠️ Only one camera available')
-        return
-    }
-    
-    isSwitchingCamera.value = true
-    
-    try {
-        const newCam = selectedCam.value === 1 ? 2 : 1
-        console.log(`🔄 Host manually switching to camera ${newCam}`)
-        
-        if (newCam === 1) {
-            await switchToCamera1()
-        } else {
-            await switchToCamera2()
-        }
-        
-        selectedCam.value = newCam
-        await updateCameraStatesInFirestore()
-    } catch (err) {
-        console.error('❌ Error switching camera:', err)
-    } finally {
-        isSwitchingCamera.value = false
-    }
+    await updateCameraStatesInFirestore()
 }
 
 const switchCamera2Internal = async () => {
-    if (!selectedCamera2Id.value || !camera2Input.value) return
+    if (availableCameras.value.length < 2) return
     
-    try {
-        const tempCameraId = selectedCameraId.value
-        const tempCameraName = camera1Name.value
-        const tempMirror = camera1Mirror.value
-        
-        selectedCameraId.value = selectedCamera2Id.value
-        camera1Name.value = camera2Name.value
-        camera1Mirror.value = camera2Mirror.value
-        
-        selectedCamera2Id.value = tempCameraId
-        camera2Name.value = tempCameraName
-        camera2Mirror.value = tempMirror
-        
-        await stopCamera()
-        await stopCamera2()
-        
-        if (selectedCameraId.value) {
-            await startCamera(selectedCameraId.value)
-        }
-        if (selectedCamera2Id.value) {
-            await startCamera2(selectedCamera2Id.value)
-        }
-        
-        if (selectedCam.value === 1 && localVideoTrack.value) {
-            await switchCamera(selectedCameraId.value!)
-        }
-        
-        await updateCameraStatesInFirestore()
-        console.log('✅ Camera 2 positions swapped')
-    } catch (err) {
-        console.error('❌ Error swapping camera 2:', err)
-    }
+    const currentIndex = availableCameras.value.findIndex(cam => cam.deviceId === selectedCamera2Id.value)
+    const nextIndex = (currentIndex + 1) % availableCameras.value.length
+    selectedCamera2Id.value = availableCameras.value[nextIndex].deviceId
+    camera2Name.value = availableCameras.value[nextIndex].label || `Camera ${nextIndex + 1}`
+    
+    await stopCamera2()
+    await startCamera2(selectedCamera2Id.value)
+    await updateCameraStatesInFirestore()
 }
 
-const toggleMute = async () => {
-    if (localAudioTrack.value) {
-        await localAudioTrack.value.setEnabled(isMuted.value)
-        isMuted.value = !isMuted.value
-    }
-}
-
-const endCall = () => {
-    const duration = Date.now() - startTime.value
-    totalDurationTime.value = millisToMinutesAndSeconds(duration)
+const endCall = async () => {
+    const endTime = Date.now()
+    const totalTime = (endTime - startTime.value) / 1000
+    const minutes = Math.floor(totalTime / 60)
+    const seconds = Math.floor(totalTime % 60)
+    totalDurationTime.value = `${minutes} minutes ${seconds} seconds`
     onCall.value = false
-    leaveChannel()
+    
+    // Hapus database room
+    await deleteRoomData()
+    
+    clearSession()
 }
 
-const millisToMinutesAndSeconds = (millis: number) => {
-    const minutes = Math.floor(millis / 60000)
-    const seconds = parseInt(((millis % 60000) / 1000).toFixed(0))
-    return minutes + ':' + (seconds < 10 ? '0' : '') + seconds
-}
-
-const clearSession = () => {
-    stopCamera()
-    stopCamera2()
-    leaveChannel()
-    document.body.classList.remove('overflow-hidden')
+const deleteRoomData = async () => {
+    try {
+        // Hapus semua dokumen dalam collection room (termasuk annotations)
+        const roomCollection = collection(firestore.value, roomID.value)
+        const snapshot = await getDocs(roomCollection)
+        
+        const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref))
+        await Promise.all(deletePromises)
+        
+        console.log('✅ All annotations deleted')
+        
+        // Hapus room-meta
+        const roomMetaDoc = doc(firestore.value, 'room-meta', roomID.value)
+        await deleteDoc(roomMetaDoc)
+        
+        console.log('✅ Room data deleted successfully')
+    } catch (err) {
+        console.error('❌ Error deleting room data:', err)
+    }
 }
 
 const clearAnnotation = async () => {
@@ -371,66 +410,92 @@ const clearAnnotation = async () => {
         const linesCollection = collection(firestore.value, roomID.value)
         const snapshot = await getDocs(linesCollection)
         
-        snapshot.docs.forEach(async (document) => {
-            if (document.id !== '_init') {
-                await deleteDoc(doc(firestore.value, roomID.value, document.id))
-            }
-        })
+        // Hapus semua dokumen kecuali _init
+        const deletePromises = snapshot.docs
+            .filter(doc => doc.id !== '_init')
+            .map(doc => deleteDoc(doc.ref))
         
+        await Promise.all(deletePromises)
         lines.value = []
-        showEraserLine.value = false
-        console.log('✅ All annotations cleared')
+        drawLineOnCanvas()
     } catch (err) {
-        console.error('Error clearing annotations', err)
+        console.error('Error clearing annotations:', err)
+    }
+}
+
+const clearSession = async () => {
+    await leaveChannel()
+    await stopCamera()
+    await stopCamera2()
+    document.body.classList.remove('overflow-hidden')
+}
+
+const toggleMute = () => {
+    if (localAudioTrack.value) {
+        if (isMuted.value) {
+            localAudioTrack.value.setEnabled(true)
+        } else {
+            localAudioTrack.value.setEnabled(false)
+        }
+        isMuted.value = !isMuted.value
     }
 }
 
 const startCamera = async (deviceId: string) => {
-    if (!cameraInput.value) return
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { deviceId: { exact: deviceId } },
             audio: false
         })
-        cameraInput.value.srcObject = stream
-        console.log('✅ Camera started:', deviceId)
+        camera1Stream.value = stream
+        if (mainVideo.value && selectedCam.value === 1) {
+            mainVideo.value.srcObject = stream
+        }
+        if (previewVideo.value && selectedCam.value === 2) {
+            previewVideo.value.srcObject = stream
+        }
+        console.log('✅ Camera 1 stream started')
     } catch (error) {
-        console.error("Could not start camera:", error)
+        console.error("Could not access camera:", error)
     }
 }
 
 const startCamera2 = async (deviceId: string) => {
-    if (!camera2Input.value) return
     try {
-        camera2Stream.value = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
             video: { deviceId: { exact: deviceId } },
             audio: false
         })
-        camera2Input.value.srcObject = camera2Stream.value
-        console.log('✅ Camera 2 started:', deviceId)
+        camera2Stream.value = stream
+        if (mainVideo.value && selectedCam.value === 2) {
+            mainVideo.value.srcObject = stream
+        }
+        if (previewVideo.value && selectedCam.value === 1) {
+            previewVideo.value.srcObject = stream
+        }
+        console.log('✅ Camera 2 stream started')
     } catch (error) {
-        console.error("Could not start camera 2:", error)
+        console.error("Could not access camera 2:", error)
     }
 }
 
 const stopCamera = async () => {
-    if (!cameraInput.value || !cameraInput.value.srcObject) return
+    if (!camera1Stream.value) return
     try {
-        const stream = cameraInput.value.srcObject as MediaStream
-        stream.getTracks().forEach((track) => track.stop())
-        cameraInput.value.srcObject = null
+        camera1Stream.value.getTracks().forEach((track) => track.stop())
+        camera1Stream.value = null
+        console.log('🛑 Camera 1 stopped')
     } catch (error) {
         console.error("Could not stop camera:", error)
     }
 }
 
 const stopCamera2 = async () => {
-    if (!camera2Input.value || !camera2Input.value.srcObject) return
+    if (!camera2Stream.value) return
     try {
-        const stream = camera2Input.value.srcObject as MediaStream
-        stream.getTracks().forEach((track) => track.stop())
-        camera2Input.value.srcObject = null
+        camera2Stream.value.getTracks().forEach((track) => track.stop())
         camera2Stream.value = null
+        console.log('🛑 Camera 2 stopped')
     } catch (error) {
         console.error("Could not stop camera 2:", error)
     }
@@ -458,26 +523,57 @@ const firestore = computed(() => {
     return $firestore as Firestore
 })
 
+const swapVideoStreams = () => {
+    if (!mainVideo.value || !previewVideo.value) return
+    
+    if (selectedCam.value === 1) {
+        // Show camera 1 on main, camera 2 on preview
+        mainVideo.value.srcObject = camera1Stream.value
+        previewVideo.value.srcObject = camera2Stream.value
+    } else {
+        // Show camera 2 on main, camera 1 on preview
+        mainVideo.value.srcObject = camera2Stream.value
+        previewVideo.value.srcObject = camera1Stream.value
+    }
+    
+    console.log('🔄 Video streams swapped - Main:', selectedCam.value === 1 ? 'Camera 1' : 'Camera 2')
+}
+
 const join = async () => {
     startTime.value = Date.now()
     onCall.value = true
 
+    console.log('🎬 Starting join process...')
     const res = await joinChannel(selectedCameraId.value ?? undefined)
+    console.log('✅ Channel joined successfully')
+    
     const localElement = document.getElementById('local-stream')
     if (localElement) {
         res?.localVideoTrack.value?.play(localElement)
+        console.log('📹 Local video track playing')
+    } else {
+        console.warn('⚠️ Local stream element not found')
     }
+    
     await updateCameraStatesInFirestore()
+    console.log('💾 Camera states updated in Firestore')
 }
 
 const listenToDrawingUpdates = async () => {
     const linesCollection = collection(firestore.value, roomID.value)
     const q = query(linesCollection, orderBy('timestamp'))
     onSnapshot(q, (snapshot) => {
-        // Filter out _init doc from lines
         const annotationDocs = snapshot.docs.filter(doc => doc.id !== '_init')
         showEraserLine.value = annotationDocs.length > 0
         lines.value = annotationDocs.map(doc => doc.data() as LineData)
+        
+        // Debug logging
+        console.log('📝 Total annotations:', lines.value.length)
+        console.log('📝 Annotations by role:', {
+            host: lines.value.filter(l => l.role === 1).length,
+            participant: lines.value.filter(l => l.role === 2).length
+        })
+        
         drawLineOnCanvas()
     })
 }
@@ -486,7 +582,7 @@ const setCanvasSize = () => {
     if (!canvas.value) return
     ctxCanvas.value = canvas.value.getContext('2d')
     if (ctxCanvas.value) {
-        const video = cameraInput.value
+        const video = mainVideo.value
         const displayedWidth = video?.clientWidth || 0
         const displayedHeight = video?.clientHeight || 0
         canvas.value.width = displayedWidth
@@ -500,22 +596,21 @@ const drawLineOnCanvas = () => {
     
     ctxCanvas.value.clearRect(0, 0, canvas.value.width, canvas.value.height)
     
-    // Save current context state
     ctxCanvas.value.save()
     
-    // If mirrored, flip the canvas context for drawing
     if (currentMirrorState.value) {
         ctxCanvas.value.translate(canvas.value.width, 0)
         ctxCanvas.value.scale(-1, 1)
     }
     
-    lines.value.forEach(lineData => {
+    lines.value.forEach((lineData) => {
         if (ctxCanvas.value && canvas.value) {
             const width = canvas.value.width
             const height = canvas.value.height
             
-            // Use color from lineData, fallback to role-based color
-            ctxCanvas.value.strokeStyle = lineData.color || (lineData.role === 1 ? 'blue' : 'red')
+            const color = lineData.color || (lineData.role === 1 ? 'blue' : 'red')
+            
+            ctxCanvas.value.strokeStyle = color
             ctxCanvas.value.beginPath()
             ctxCanvas.value.moveTo(lineData.startX * width, lineData.startY * height)
             ctxCanvas.value.lineTo(lineData.endX * width, lineData.endY * height)
@@ -523,37 +618,65 @@ const drawLineOnCanvas = () => {
         }
     })
     
-    // Restore context state
     ctxCanvas.value.restore()
 }
 
 const listenUserPublish = async () => {
+    console.log('👂 Setting up user publish listeners...')
+    
     client.value.on('user-published', async (user: { uid: any; videoTrack: any; audioTrack: any }, mediaType: string) => {
-        if (user.uid === userUUID.value) return
+        console.log('📢 User published:', user.uid, 'Media type:', mediaType)
+        
+        if (user.uid === userUUID.value) {
+            console.log('⏭️ Skipping own user')
+            return
+        }
+        
         if (mediaType === 'video') {
+            console.log('🎥 Subscribing to video from:', user.uid)
             await client.value.subscribe(user, 'video')
             const remoteStream = user.videoTrack
             const remoteElement = document.getElementById('remote-stream')
             if (remoteElement) {
                 remoteStream.play(remoteElement)
+                hasRemoteVideo.value = true
+                console.log('✅ Remote video playing, hasRemoteVideo set to true')
+            } else {
+                console.error('❌ Remote stream element not found!')
             }
         } else if (mediaType === 'audio') {
+            console.log('🎵 Subscribing to audio from:', user.uid)
             await client.value.subscribe(user, 'audio')
             user.audioTrack.play()
+            console.log('✅ Remote audio playing')
         }
+    })
+    
+    client.value.on('user-unpublished', (user: { uid: any }, mediaType: string) => {
+        console.log('📴 User unpublished:', user.uid, 'Media type:', mediaType)
+        if (mediaType === 'video') {
+            hasRemoteVideo.value = false
+            console.log('⚠️ Remote video stopped, hasRemoteVideo set to false')
+        }
+    })
+    
+    client.value.on('user-joined', (user: { uid: any }) => {
+        console.log('👋 User joined:', user.uid)
+    })
+    
+    client.value.on('user-left', (user: { uid: any }) => {
+        console.log('👋 User left:', user.uid)
+        hasRemoteVideo.value = false
     })
 }
 
-// Helper function to adjust coordinates when mirrored
 const adjustCoordinatesForMirror = (x: number, y: number): { x: number, y: number } => {
     if (currentMirrorState.value && canvas.value) {
-        // When mirrored, flip the x coordinate
         return { x: 1 - x, y }
     }
     return { x, y }
 }
 
-// Host can draw (keeping the code but won't be used much)
 const startDraw = (event: MouseEvent) => {
     isDrawing.value = true
     const coords = getCoordinates(event, canvas.value)
